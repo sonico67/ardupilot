@@ -460,6 +460,14 @@ struct PACKED log_Attitude {
     int16_t  pitch;
     uint16_t control_yaw;
     uint16_t yaw;
+	// JD-ST : wind compensation and offsets
+	float wind_comp_x;				
+	float wind_comp_y;
+	int16_t wind_offset_pitch;
+	int16_t wind_offset_roll;
+	int16_t timeout_pitch;
+	int16_t timeout_roll;
+	int16_t loiter_stab_timer;
 };
 
 // Write an attitude packet
@@ -475,7 +483,15 @@ static void Log_Write_Attitude()
         control_pitch   : (int16_t)targets.y,
         pitch           : (int16_t)ahrs.pitch_sensor,
         control_yaw     : (uint16_t)targets.z,
-        yaw             : (uint16_t)ahrs.yaw_sensor
+        yaw             : (uint16_t)ahrs.yaw_sensor,
+		//JD-ST : wind compensation and offsets
+		wind_comp_x		: (float)wind_comp_x,
+		wind_comp_y		: (float)wind_comp_y,
+		wind_offset_pitch: (int16_t)wind_offset_pitch,
+		wind_offset_roll: (int16_t)wind_offset_roll,
+		timeout_pitch	: (int16_t)timeout_pitch,
+		timeout_roll	: (int16_t)timeout_roll,
+		loiter_stab_timer: (int16_t)loiter_stab_timer		
     };
     DataFlash.WriteBlock(&pkt, sizeof(pkt));
 
@@ -678,11 +694,6 @@ static void Log_Write_Error(uint8_t sub_system, uint8_t error_code)
     DataFlash.WriteBlock(&pkt, sizeof(pkt));
 }
 
-static void Log_Write_Baro(void)
-{
-    DataFlash.Log_Write_Baro(barometer);
-}
-
 static const struct LogStructure log_structure[] PROGMEM = {
     LOG_COMMON_STRUCTURES,
 #if AUTOTUNE == ENABLED
@@ -707,8 +718,9 @@ static const struct LogStructure log_structure[] PROGMEM = {
       "PM",  "HHIhBHB",    "NLon,NLoop,MaxT,PMT,I2CErr,INSErr,INAVErr" },
     { LOG_CMD_MSG, sizeof(log_Cmd),                 
       "CMD", "BBBBBeLL",     "CTot,CNum,CId,COpt,Prm1,Alt,Lat,Lng" },
-    { LOG_ATTITUDE_MSG, sizeof(log_Attitude),       
-      "ATT", "IccccCC",      "TimeMS,DesRoll,Roll,DesPitch,Pitch,DesYaw,Yaw" },
+    { LOG_ATTITUDE_MSG, sizeof(log_Attitude),  
+      "ATT", "IccccCCffccccc",       "TMS,DRoll,Roll,DPitch,Pitch,DYaw,Yaw,Cx,Cy,Op,Or,Tp,Tr,Tl" },	// JD-ST: log wind_comp and wind_offset	
+//      "ATT", "IccccCC",      "TimeMS,DesRoll,Roll,DesPitch,Pitch,DesYaw,Yaw" },
     { LOG_MODE_MSG, sizeof(log_Mode),
       "MODE", "Mh",          "Mode,ThrCrs" },
     { LOG_STARTUP_MSG, sizeof(log_Startup),         
@@ -804,7 +816,6 @@ static void Log_Write_Control_Tuning() {}
 static void Log_Write_Performance() {}
 static void Log_Write_Camera() {}
 static void Log_Write_Error(uint8_t sub_system, uint8_t error_code) {}
-static void Log_Write_Baro(void);
 static int8_t process_logs(uint8_t argc, const Menu::arg *argv) {
     return 0;
 }

@@ -86,7 +86,10 @@ static bool set_mode(uint8_t mode)
             success = autotune_init(ignore_checks);
             break;
 #endif
-
+		case HYBRID:		// JD-ST
+			success = hybrid_init(ignore_checks);
+			break;
+			
         default:
             success = false;
             break;
@@ -177,6 +180,10 @@ static void update_flight_mode()
             autotune_run();
             break;
 #endif
+
+		case HYBRID:		// JD-ST
+			hybrid_run();
+			break;
     }
 }
 
@@ -205,6 +212,7 @@ static bool mode_requires_GPS(uint8_t mode) {
         case RTL:
         case CIRCLE:
         case DRIFT:
+		case HYBRID:	// JD-ST
             return true;
         default:
             return false;
@@ -277,6 +285,8 @@ print_flight_mode(AP_HAL::BetterStream *port, uint8_t mode)
     case AUTOTUNE:
         port->print_P(PSTR("AUTOTUNE"));
         break;
+	case HYBRID:	// JD-ST
+		port->print_P(PSTR("HYBRID"));
     default:
         port->printf_P(PSTR("Mode(%u)"), (unsigned)mode);
         break;

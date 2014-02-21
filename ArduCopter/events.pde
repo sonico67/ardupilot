@@ -139,6 +139,7 @@ static void failsafe_battery_event(void)
                 break;
             case LOITER:
             case ALT_HOLD:
+			case HYBRID:		// JD-ST
                 // if landed with throttle at zero disarm, otherwise fall through to default handling
                 if (g.rc_3.control_in == 0 && ap.land_complete) {
                     init_disarm_motors();

@@ -65,6 +65,7 @@ static NOINLINE void send_heartbeat(mavlink_channel_t chan)
     case LOITER:
     case GUIDED:
     case CIRCLE:
+	case HYBRID:	// JD-ST
         base_mode |= MAV_MODE_FLAG_GUIDED_ENABLED;
         // note that MAV_MODE_FLAG_AUTO_ENABLED does not match what
         // APM does in any mode, as that is defined as "system finds its own goal
@@ -172,6 +173,7 @@ static NOINLINE void send_extended_status1(mavlink_channel_t chan, uint16_t pack
     case CIRCLE:
     case LAND:
     case OF_LOITER:
+	case HYBRID:			// JD-ST
         control_sensors_enabled |= MAV_SYS_STATUS_SENSOR_Z_ALTITUDE_CONTROL;
         control_sensors_enabled |= MAV_SYS_STATUS_SENSOR_XY_POSITION_CONTROL;
         break;
@@ -1143,12 +1145,6 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
         break;
     }
 
-    case MAVLINK_MSG_ID_COMMAND_ACK:
-    {
-        command_ack_counter++;
-        break;
-    }
-
     case MAVLINK_MSG_ID_COMMAND_LONG:
     {
         // decode
@@ -1184,7 +1180,6 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
             break;
 
         case MAV_CMD_PREFLIGHT_CALIBRATION:
-            result = MAV_RESULT_ACCEPTED;
             if (packet.param1 == 1 ||
                 packet.param2 == 1) {
                 ins.init_accel();
@@ -1205,10 +1200,7 @@ void GCS_MAVLINK::handleMessage(mavlink_message_t* msg)
                     ahrs.set_trim(Vector3f(trim_roll, trim_pitch, 0));
                 }
             }
-            if (packet.param6 == 1) {
-                // compassmot calibration
-                result = mavlink_compassmot(chan);
-            }
+            result = MAV_RESULT_ACCEPTED;
             break;
 
         case MAV_CMD_COMPONENT_ARM_DISARM:

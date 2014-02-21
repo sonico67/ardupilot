@@ -186,8 +186,7 @@ static AP_Scheduler scheduler;
 // AP_Notify instance
 static AP_Notify notify;
 
-// used to detect MAVLink acks from GCS to stop compassmot
-static uint8_t command_ack_counter;
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // prototypes
@@ -404,7 +403,6 @@ static union {
         uint8_t CH8_flag            : 2; // 11,12   // ch8 aux switch : 0 is low or false, 1 is center or true, 2 is high
         uint8_t usb_connected       : 1; // 13      // true if APM is powered from USB connection
         uint8_t rc_receiver_present : 1; // 14  // true if we have an rc receiver present (i.e. if we've ever received an update
-        uint8_t compass_mot         : 1; // 15  // true if we are currently performing compassmot calibration
     };
     uint16_t value;
 } ap;
@@ -647,7 +645,12 @@ static int16_t yaw_look_at_heading_slew;
 // heading when in yaw_look_ahead_bearing
 static float yaw_look_ahead_bearing;
 
-
+// JD-ST : Hybrid mode, placed here for logging purposes
+//
+static float wind_comp_x, wind_comp_y;// ST-JD : wind compensation vector, averaged I terms from loiter controller
+static int16_t wind_offset_roll,wind_offset_pitch;	// ST-JD : wind offsets for pitch/roll
+static int16_t timeout_roll, timeout_pitch; 	// seconds - time allowed for the braking to complete, this timeout will be updated at half-braking
+static int16_t loiter_stab_timer;		// loiter stabilization timer: we read pid's I terms in wind_comp only after this time from loiter start
 
 ////////////////////////////////////////////////////////////////////////////////
 // Delay Mission Scripting Command

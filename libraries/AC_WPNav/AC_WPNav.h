@@ -33,6 +33,15 @@
 
 #define WPNAV_MIN_LEASH_LENGTH          100.0f      // minimum leash lengths in cm
 
+//#define WPNAV_LOITER_DB					70			// ST-JD : default ALT_HOLD+LOITER commutation threshold
+//#define SPEED_0                         10          // ST-JD : the max speed in cm/s to consider we have no more velocity for switching to loiter
+#define BRAKE_RATE                      8.0f        // ST-JD : set it from 3 to 20, means the number of deg/s the copter rolls/tilt during braking
+#define MAX_BRAKING_ANGLE               3000        // ST-JD : set it from 2000 to 4500 in centidegrees
+#define SMOOTH_RATE_FACTOR              5           // ST-JD : set it from 4 to 8, 4 means longer but smoother transition
+#define STICK_RELEASE_SMOOTH_ANGLE      1800        // ST-JD : set it from 1000 to 2000, means the max number of centideg required to apply to smooth stick release effect (this avoid overshoot)
+#define LOITER_STAB_TIMER               300         // ST-JD : Must be higher than BRAKE_LOIT_MIX_TIMER (twice is a good deal) set it from 100 to 500, the number of centiseconds between loiter engage and getting wind_comp (once loiter stabilized)
+#define BRAKE_LOIT_MIX_TIMER            150         // ST-JD : Must be lower than LOITER_STAB_TIMER set it from 100 to 200, the number of centiseconds brake and loiter commands are mixed to make a smooth transition.
+
 class AC_WPNav
 {
 public:
@@ -127,7 +136,14 @@ public:
     ///
     /// shared methods
     ///
-
+	//AP_Int16  	_loiter_deadband;		// ST-JD : loiter to alt_hold threshold switch
+	AP_Float    _brake_rate;			// ST-JD : set it from 5 to 20, means the number of deg/s the copter rolls/tilt during braking
+    AP_Int16    _max_braking_angle;		// ST-JD : set it from 2000 to 4500 in centidegrees
+    //AP_Int16	_speed_0;				// ST-JD : the max speed in cm/s to consider we have no more velocity for switching to loiter
+	AP_Int16    _smooth_rate_factor;    // ST-JD : set it from 4 to 7, 4 means longer but smoother transition
+	bool		loiter_reset;           // ST-JD : init_loiter_target ask for a loiter reset at first loiter_update
+    //bool        init_I;                 // ST-JD : allows rate i_term init in reset_i() function MOVED TO AC_PosControl
+	
     /// get desired roll, pitch which should be fed into stabilize controllers
     int32_t get_roll() const { return _pos_control.get_roll(); };
     int32_t get_pitch() const { return _pos_control.get_pitch(); };

@@ -105,9 +105,11 @@
 #define LAND 9                          // AUTO control
 #define OF_LOITER 10                    // Hold a single location using optical flow sensor
 #define DRIFT 11                        // DRIFT mode (Note: 12 is no longer used)
+#define HYBRID 12						// JD-ST HYBRID mode
 #define SPORT 13                        // earth frame rate control
 #define FLIP        14                  // flip the vehicle on the roll axis
 #define AUTOTUNE    15                  // autotune the vehicle's roll and pitch gains
+
 #define NUM_MODES   16
 
 
