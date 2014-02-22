@@ -21,9 +21,9 @@ static int16_t loiter_stab_timer;		// loiter stabilization timer: we read pid's 
 */
 
 static bool timeout_roll_updated, timeout_pitch_updated; 	// Allow the timeout to be updated only once per braking.
-static int16_t brake_max_roll, brake_max_pitch; 	         // used to detect half braking
-static float brake_loiter_mix;		    // varies from 0 to 1, allows a smooth loiter engage
-static int8_t  update_wind_offset_timer;	// update wind_offset decimator (10Hz)
+static int16_t brake_max_roll, brake_max_pitch; 	        // used to detect half braking
+static float brake_loiter_mix;		   						// varies from 0 to 1, allows a smooth loiter engage
+static int8_t  update_wind_offset_timer;					// update wind_offset decimator (10Hz)
 static int8_t hybrid_nav_mode=NAV_NONE;						// replace  old nav_mode variable
 
 // hybrid_init - initialise hybrid controller
@@ -45,15 +45,21 @@ static bool hybrid_init(bool ignore_checks)
                 hybrid_mode_roll=1;				// Alt_hold like to avoid hard twitch if hybrid enabled in flight
                 hybrid_mode_pitch=1;			//               
             }
-            wind_comp_x=wind_comp_y=0;      // Init wind_comp (ef). For now, resetted each time hybrid is switched on
-            wind_offset_roll=0;             // Init offset angles
+            wind_comp_x=wind_comp_y=0;      	// Init wind_comp (ef). For now, resetted each time hybrid is switched on
+            wind_offset_roll=0;             	// Init offset angles
             wind_offset_pitch=0;
-            update_wind_offset_timer=0;     // Init wind offset computation timer          
+            update_wind_offset_timer=0;     	// Init wind offset computation timer          
             loiter_stab_timer=LOITER_STAB_TIMER;
         return true;
     }else{
         return false;
     }
+}
+
+// hybrid_exit - restore position controller
+static void hybrid_exit()
+{
+	pos_control.init_I=true;    // restore reset I for normal Loiter behaviour
 }
 
 // hybrid_run - runs the hybrid controller
@@ -213,7 +219,6 @@ static void hybrid_run()
 			// Brake_Loiter commands mix factor
 			brake_loiter_mix = constrain_float((float)(LOITER_STAB_TIMER-loiter_stab_timer)/(float)BRAKE_LOIT_MIX_TIMER, 0, 1.0);
 		}else{
-			// NOTA: verificare esattamente cosa veniva fatto prima
 			hybrid_nav_mode=NAV_HYBRID;	 // turns on NAV_HYBRID if both sticks are at rest 
 			pos_control.init_I=false;    // restore previous i_terms in Reset_I() => to avoid the stop_and_go effect
             //wp_nav.init_loiter_target(inertial_nav.get_position(), Vector3f(0,0,0));

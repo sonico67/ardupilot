@@ -94,7 +94,12 @@ static bool set_mode(uint8_t mode)
             success = false;
             break;
     }
-
+	
+	switch (control_mode) {
+		case HYBRID:	// JD-ST
+			hybrid_exit();
+			break;
+	}
     // update flight mode
     if (success) {
         // perform any cleanup required by previous flight mode
