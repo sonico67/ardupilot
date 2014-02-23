@@ -1013,6 +1013,12 @@ const AP_Param::Info var_info[] PROGMEM = {
     // @Path: ../libraries/AP_RCMapper/AP_RCMapper.cpp
     GOBJECT(rcmap, "RCMAP_",        RCMapper),
 
+#if AP_AHRS_NAVEKF_AVAILABLE
+    // @Group: EKF_
+    // @Path: ../libraries/AP_NavEKF/AP_NavEKF.cpp
+    GOBJECTN(ahrs.get_NavEKF(), NavEKF, "EKF_", NavEKF),
+#endif
+
     AP_VAREND
 };
 
@@ -1052,6 +1058,7 @@ static void load_parameters(void)
     }
     // disable centrifugal force correction, it will be enabled as part of the arming process
     ahrs.set_correct_centrifugal(false);
+    ahrs.set_armed(false);
 
     // setup different AHRS gains for ArduCopter than the default
     // but allow users to override in their config

@@ -64,6 +64,8 @@ AC_PosControl::AC_PosControl(const AP_AHRS& ahrs, const AP_InertialNav& inav,
 #endif
     _flags.recalc_leash_xy = true;
     _flags.recalc_leash_z = true;
+	
+	init_I=true;		    // JD-ST reset_I allowed
 }
 
 ///
@@ -648,9 +650,10 @@ void AC_PosControl::accel_to_lean_angles()
 /// reset_I_xy - clears I terms from loiter PID controller
 void AC_PosControl::reset_I_xy()
 {
-    _pid_rate_lon.reset_I();
-    _pid_rate_lat.reset_I();
-
+	if (init_I){	    // JD-ST : init rate pid's I term to 0 for loiter mode only, not for hybrid
+        _pid_rate_lon.reset_I();
+        _pid_rate_lat.reset_I();
+    }
     // set last velocity to current velocity
     _vel_last = _inav.get_velocity();
 }

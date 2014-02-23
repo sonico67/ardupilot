@@ -186,7 +186,8 @@ static AP_Scheduler scheduler;
 // AP_Notify instance
 static AP_Notify notify;
 
-
+// used to detect MAVLink acks from GCS to stop compassmot
+static uint8_t command_ack_counter;
 
 ////////////////////////////////////////////////////////////////////////////////
 // prototypes
@@ -403,6 +404,7 @@ static union {
         uint8_t CH8_flag            : 2; // 11,12   // ch8 aux switch : 0 is low or false, 1 is center or true, 2 is high
         uint8_t usb_connected       : 1; // 13      // true if APM is powered from USB connection
         uint8_t rc_receiver_present : 1; // 14  // true if we have an rc receiver present (i.e. if we've ever received an update
+        uint8_t compass_mot         : 1; // 15  // true if we are currently performing compassmot calibration
     };
     uint16_t value;
 } ap;
