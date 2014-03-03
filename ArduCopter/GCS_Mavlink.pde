@@ -307,6 +307,27 @@ static void NOINLINE send_gps_raw(mavlink_channel_t chan)
         g_gps->ground_course_cd, // 1/100 degrees,
         g_gps->num_sats);
 
+#if GPS2_ENABLE
+    if (g_gps2 != NULL && g_gps2->status() != GPS::NO_GPS) {
+        int16_t payload_space = comm_get_txspace(chan) - MAVLINK_NUM_NON_PAYLOAD_BYTES;
+        if (payload_space >= MAVLINK_MSG_ID_GPS2_RAW_LEN) {
+            mavlink_msg_gps2_raw_send(
+                chan,
+                g_gps2->last_fix_time*(uint64_t)1000,
+                g_gps2->status(),
+                g_gps2->latitude,      // in 1E7 degrees
+                g_gps2->longitude,     // in 1E7 degrees
+                g_gps2->altitude_cm * 10, // in mm
+                g_gps2->hdop,
+                65535,
+                g_gps2->ground_speed_cm,  // cm/s
+                g_gps2->ground_course_cd, // 1/100 degrees,
+                g_gps2->num_sats,
+                0, 
+                0);
+        }
+    }
+#endif
 }
 
 static void NOINLINE send_system_time(mavlink_channel_t chan)
@@ -1936,7 +1957,8 @@ mission_failed:
 			break;
 		
         // set gps hil sensor
-        g_gps->setHIL(packet.time_usec/1000,
+        g_gps->setHIL(GPS::FIX_3D,
+                      packet.time_usec/1000,
                       packet.lat*1.0e-7, packet.lon*1.0e-7, packet.alt*1.0e-3,
                       vel*1.0e-2, cog*1.0e-2, 0, 10);
 
@@ -1957,9 +1979,9 @@ mission_failed:
         accels.y = packet.yacc * (GRAVITY_MSS/1000.0);
         accels.z = packet.zacc * (GRAVITY_MSS/1000.0);
 
-        ins.set_gyro(gyros);
+        ins.set_gyro(0, gyros);
 
-        ins.set_accel(accels);
+        ins.set_accel(0, accels);
 
         barometer.setHIL(packet.alt*0.001f);
         compass.setHIL(packet.roll, packet.pitch, packet.yaw);

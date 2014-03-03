@@ -256,7 +256,8 @@ private:
     ///    converts desired accelerations provided in lat/lon frame to roll/pitch angles
     void accel_to_lean_angles();
 
-   
+    /// reset_I_xy - clears I terms from horizontal position PID controller
+    //void reset_I_xy();
 
     /// calc_leash_length - calculates the horizontal leash length given a maximum speed, acceleration and position kP gain
     float calc_leash_length(float speed_cms, float accel_cms, float kP) const;

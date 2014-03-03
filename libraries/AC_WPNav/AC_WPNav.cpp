@@ -83,7 +83,7 @@ const AP_Param::GroupInfo AC_WPNav::var_info[] PROGMEM = {
     // @Range: 5 10
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("BR_RATE",    7, AC_WPNav, _brake_rate, BRAKE_RATE),
+    AP_GROUPINFO("BR_RATE",    6, AC_WPNav, _brake_rate, BRAKE_RATE),
 	
 	// @Param: HB_MAX_BR_ANG
     // @DisplayName: max pitch/roll angle during braking
@@ -93,7 +93,7 @@ const AP_Param::GroupInfo AC_WPNav::var_info[] PROGMEM = {
     // @Range: 2000 4500
     // @Increment: 100
     // @User: Standard
-    AP_GROUPINFO("BR_MAX_ANG",   8, AC_WPNav, _max_braking_angle, MAX_BRAKING_ANGLE),
+    AP_GROUPINFO("BR_MAX_ANG",   7, AC_WPNav, _max_braking_angle, MAX_BRAKING_ANGLE),
 	
 	// @Param: HB_SPEED_0
     // @DisplayName: the max speed in cm/s to consider we have no more velocity for switching to loiter
@@ -113,7 +113,7 @@ const AP_Param::GroupInfo AC_WPNav::var_info[] PROGMEM = {
     // @Range: 4 7
     // @Increment: 1
     // @User: Standard
-    AP_GROUPINFO("STICK_SMTH",   10, AC_WPNav, _smooth_rate_factor, SMOOTH_RATE_FACTOR),
+    AP_GROUPINFO("STICK_SMTH",   8, AC_WPNav, _smooth_rate_factor, SMOOTH_RATE_FACTOR),
     	
     AP_GROUPEND
 };
@@ -141,7 +141,6 @@ AC_WPNav::AC_WPNav(const AP_InertialNav* inav, const AP_AHRS* ahrs, AC_PosContro
 {
     AP_Param::setup_object_defaults(this, var_info);
 	loiter_reset=true;      // ST-JD
-
 }
 
 ///
@@ -157,8 +156,11 @@ void AC_WPNav::set_loiter_target(const Vector3f& position)
 	// initialise feed forward velocity to zero
 	_pos_control.set_desired_velocity(0,0);
 
-	// initialise pos controller speed and acceleration
-	_pos_control.set_speed_xy(_loiter_speed_cms);
+    // initialise pos controller speed
+    _pos_control.set_speed_xy(_loiter_speed_cms);
+
+    // initialise pos controller acceleration
+    _loiter_accel_cms = _loiter_speed_cms/2.0f;
     _pos_control.set_accel_xy(_loiter_accel_cms);
 
     // initialise pilot input
@@ -177,9 +179,11 @@ void AC_WPNav::init_loiter_target()
     // initialise feed forward velocities to zero
     _pos_control.set_desired_velocity(curr_vel.x, curr_vel.y);
 
-    // initialise pos controller speed, acceleration and leash length
-    // To-Do: will this cause problems for circle which calls this continuously?
+    // initialise pos controller speed
     _pos_control.set_speed_xy(_loiter_speed_cms);
+
+    // initialise pos controller acceleration
+    _loiter_accel_cms = _loiter_speed_cms/2.0f;
     _pos_control.set_accel_xy(_loiter_accel_cms);
 
     // initialise pilot input
@@ -215,6 +219,7 @@ void AC_WPNav::calc_loiter_desired_velocity(float nav_dt)
     // check loiter speed and avoid divide by zero
     if( _loiter_speed_cms < 100.0f) {
         _loiter_speed_cms = 100.0f;
+        _loiter_accel_cms = _loiter_speed_cms/2.0f;
     }
 
     // rotate pilot input to lat/lon frame
@@ -276,16 +281,16 @@ void AC_WPNav::update_loiter()
 			loiter_reset=false;             // ST-JD
 			_pos_control.reset_I_xy();
 			//_loiter_step = 0;
-		}
-		// capture time since last iteration
-		_loiter_last_update = now;
-		// translate any adjustments from pilot to loiter target
+        }
+            // capture time since last iteration
+            _loiter_last_update = now;
+            // translate any adjustments from pilot to loiter target
         calc_loiter_desired_velocity(dt);
         // trigger position controller on next update
         _pos_control.trigger_xy();
     }else{
-		// run loiter's position to velocity step
-		_pos_control.update_pos_controller(true);
+            // run loiter's position to velocity step
+            _pos_control.update_pos_controller(true);
     }
 }
 

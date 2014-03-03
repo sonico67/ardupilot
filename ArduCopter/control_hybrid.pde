@@ -114,6 +114,7 @@ static void hybrid_run()
 	//define roll/pitch modes from stick input
 	//get roll stick input and update new roll mode
 	if (abs(target_roll) > LOITER_DEADBAND) { //stick input detected => direct to stab mode
+		update_wind_offset_timer=0;		// force wind_comp update
 		hybrid_mode_roll = 1;           // Set stab roll mode
 	}else{
 		if((hybrid_mode_roll == 1)  && (abs(brake_roll) < 2*wp_nav._brake_rate)){	    // stick released from stab and copter horizontal (at wind comp) => transition mode
@@ -134,6 +135,7 @@ static void hybrid_run()
 	}
 	//get pitch stick input and update new pitch mode
 	if (abs(target_pitch) > LOITER_DEADBAND){  //stick input detected => direct to stab mode
+		update_wind_offset_timer=0;		// force wind_comp update
 		hybrid_mode_pitch = 1;          // Set stab pitch mode
 	}else{
 		if((hybrid_mode_pitch == 1) && (abs(brake_pitch) < 2*wp_nav._brake_rate)){	    // stick released from stab and copter horizontal (at wind_comp) => transition mode
@@ -212,9 +214,9 @@ static void hybrid_run()
 		if (hybrid_nav_mode==NAV_HYBRID){
 			if (!ap.land_complete && loiter_stab_timer!=0){
 				loiter_stab_timer--;
-			}else if (max(abs(vel.x),abs(vel.y))<SPEED_0){ //Or maybe 2*, 3* speed_0...
-				if (wind_comp_x==0) wind_comp_x=pos_control.get_desired_acc_x(); else wind_comp_x=(0.99f*wind_comp_x+0.01f*pos_control.get_desired_acc_x());
-				if (wind_comp_y==0) wind_comp_y=pos_control.get_desired_acc_y(); else wind_comp_y=(0.99f*wind_comp_y+0.01f*pos_control.get_desired_acc_y());
+			}else if (max(fabs(vel.x),fabs(vel.y))<SPEED_0){ //Or maybe 2*, 3* speed_0...
+				if (wind_comp_x==0) wind_comp_x=pos_control.get_desired_acc_x(); else wind_comp_x=(0.97f*wind_comp_x+0.03f*pos_control.get_desired_acc_x());
+				if (wind_comp_y==0) wind_comp_y=pos_control.get_desired_acc_y(); else wind_comp_y=(0.97f*wind_comp_y+0.03f*pos_control.get_desired_acc_y());
 			}
 			// Brake_Loiter commands mix factor
 			brake_loiter_mix = constrain_float((float)(LOITER_STAB_TIMER-loiter_stab_timer)/(float)BRAKE_LOIT_MIX_TIMER, 0, 1.0);
@@ -222,8 +224,8 @@ static void hybrid_run()
 			hybrid_nav_mode=NAV_HYBRID;	 // turns on NAV_HYBRID if both sticks are at rest 
 			pos_control.init_I=false;    // restore previous i_terms in Reset_I() => to avoid the stop_and_go effect
             //wp_nav.init_loiter_target(inertial_nav.get_position(), Vector3f(0,0,0));
-			wp_nav.init_loiter_target(); // init loiter controller and sets stopping point
-			
+			wp_nav.init_loiter_target(); // init loiter controller and sets XY stopping point
+			pos_control.set_target_to_stopping_point_z();	// init altitude
 			loiter_stab_timer=LOITER_STAB_TIMER;      // starts a 3 seconds timer
 			brake_roll = 1;             // required for next mode_1 smooth stick release and to avoid twitch
 			brake_pitch = 1;            // required for next mode_1 smooth stick release and to avoid twitch
@@ -239,6 +241,7 @@ static void hybrid_run()
 		} else update_wind_offset_timer--;
 	}
 	if (ap.land_complete) {
+		pos_control.init_I=true;
         wp_nav.init_loiter_target();
         attitude_control.init_targets();
         attitude_control.set_throttle_out(0, false);
@@ -282,14 +285,22 @@ static void hybrid_run()
 		// call attitude controller
 		attitude_control.angle_ef_roll_pitch_rate_ef_yaw(target_roll, target_pitch, target_yaw_rate);
 		
-		 // run altitude controller
-		if (sonar_alt_health >= SONAR_ALT_HEALTH_MAX) {
-			// if sonar is ok, use surface tracking
-			target_climb_rate = get_throttle_surface_tracking(target_climb_rate, pos_control.get_alt_target(), G_Dt);
+		 // runs Hybrid altitude controller
+		if ((hybrid_mode_pitch==3) && (hybrid_mode_roll==3)) {
+			if (sonar_alt_health >= SONAR_ALT_HEALTH_MAX) {
+				// if sonar is ok, use surface tracking
+				target_climb_rate = get_throttle_surface_tracking(target_climb_rate, pos_control.get_alt_target(), G_Dt);
+			}
+			// update altitude target and call position controller
+			pos_control.set_alt_target_from_climb_rate(target_climb_rate, G_Dt);
+			pos_control.update_z_controller();
+		} else { // Manual throttle when repositioning: JASON Throttle assist
+			// Grab inertial velocity
+			Vector3f vel = inertial_nav.get_velocity();
+			float myGain = 1.0 - ((float)abs(pilot_throttle_scaled - 500) / 200.0);
+			myGain = max(myGain, 0) * -2; // 2 is the gain
+			attitude_control.set_throttle_out(pilot_throttle_scaled + (vel.z * myGain), true);
 		}
-		// update altitude target and call position controller
-		pos_control.set_alt_target_from_climb_rate(target_climb_rate, G_Dt);
-		pos_control.update_z_controller();
 	}
 }
 	
