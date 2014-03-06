@@ -39,8 +39,6 @@
 #define MAX_BRAKING_ANGLE               3000        // ST-JD : set it from 2000 to 4500 in centidegrees
 #define SMOOTH_RATE_FACTOR              5           // ST-JD : set it from 4 to 8, 4 means longer but smoother transition
 #define STICK_RELEASE_SMOOTH_ANGLE      1800        // ST-JD : set it from 1000 to 2000, means the max number of centideg required to apply to smooth stick release effect (this avoid overshoot)
-#define LOITER_STAB_TIMER               300         // ST-JD : Must be higher than BRAKE_LOIT_MIX_TIMER (twice is a good deal) set it from 100 to 500, the number of centiseconds between loiter engage and getting wind_comp (once loiter stabilized)
-#define BRAKE_LOIT_MIX_TIMER            150         // ST-JD : Must be lower than LOITER_STAB_TIMER set it from 100 to 200, the number of centiseconds brake and loiter commands are mixed to make a smooth transition.
 
 class AC_WPNav
 {
