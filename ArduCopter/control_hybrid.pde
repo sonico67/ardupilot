@@ -227,7 +227,10 @@ static void hybrid_run()
 		}
 		// loiter to manual mix
 		if ((hybrid_mode_pitch==1)||(hybrid_mode_roll==1)) {
-			loiter_man_mix = constrain_float((float)(LOITER_MAN_MIX_TIMER-loiter_man_timer)/(float)LOITER_MAN_MIX_TIMER, 0, 1.0);
+			if (!ap.land_complete && loiter_man_timer!=0){
+				loiter_man_mix = constrain_float((float)(loiter_man_timer)/(float)LOITER_MAN_MIX_TIMER, 0, 1.0);//constrain_float((float)(LOITER_MAN_MIX_TIMER-loiter_man_timer)/(float)LOITER_MAN_MIX_TIMER, 0, 1.0);
+				loiter_man_timer--;
+			}
 		}
 		// loitering/moving:
 		if ((hybrid_mode_pitch==3)&&(hybrid_mode_roll==3)){
@@ -268,7 +271,7 @@ static void hybrid_run()
 			} else update_wind_offset_timer--;
 		}
 		
-		// if required, runs loiter controller
+		// if required, update loiter controller
 		if(hybrid_nav_mode == NAV_HYBRID)
 		{
 			wp_nav.update_loiter();
@@ -276,7 +279,7 @@ static void hybrid_run()
 		// select output to stabilize controllers
 		switch (hybrid_mode_roll){
 			//
-			// todo: try to mix loiter->manual using brake_loiter_mix variable as we are doing on loiter engage
+			// to do: try to mix loiter->manual using brake_loiter_mix variable as we are doing on loiter engage
 			//
 			case 1: { 
 						//Loiter-Manual mix at loiter exit
@@ -313,8 +316,8 @@ static void hybrid_run()
 		target_roll=constrain_int16(target_roll,-aparm.angle_max,aparm.angle_max);
 		target_pitch=constrain_int16(target_pitch,-aparm.angle_max,aparm.angle_max);
 		attitude_control.angle_ef_roll_pitch_rate_ef_yaw(target_roll, target_pitch, target_yaw_rate);
-// switch Alt Hold <-> Throttle Assist
-#define MXHYBRID
+
+#define MXHYBRID	// switch Alt Hold <-> Throttle Assist
 //define AHHYBRID 	 // only Alt Hold
 //define TAHYBRID 	 // only Throttle Assist
 #ifdef MXHYBRID
