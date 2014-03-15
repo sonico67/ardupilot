@@ -37,7 +37,7 @@ int8_t    flip_dir;                 // roll direction (-1 = roll left, 1 = roll 
 static bool flip_init(bool ignore_checks)
 {
     // only allow flip from ACRO, Stabilize, AltHold or Drift flight modes
-    if (control_mode != ACRO && control_mode != STABILIZE && control_mode != ALT_HOLD) {
+    if (control_mode != ACRO && control_mode != STABILIZE && control_mode != ALT_HOLD && control_mode != HYBRID) {
         return false;
     }
 

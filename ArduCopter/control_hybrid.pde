@@ -9,12 +9,24 @@
 #define NAV_NONE   0
 #define LOITER_STAB_TIMER               300         // ST-JD : Must be higher than BRAKE_LOIT_MIX_TIMER (twice is a good deal) set it from 100 to 500, the number of centiseconds between loiter engage and getting wind_comp (once loiter stabilized)
 #define BRAKE_LOIT_MIX_TIMER            150         // ST-JD : Must be lower than LOITER_STAB_TIMER set it from 100 to 200, the number of centiseconds brake and loiter commands are mixed to make a smooth transition.
-#define LOITER_MAN_MIX_TIMER			150			// ST-JD : set it from 100 to 200, the number of centiseconds loiter and manual commands are mixed to make a smooth transition.
+#define LOITER_MAN_MIX_TIMER			50			// ST-JD : set it from 100 to 200, the number of centiseconds loiter and manual commands are mixed to make a smooth transition.
+#define HYBRID_THROTTLE_FACTOR 			1.3f     	// Need param? Used to define the min and max throttle from the throttle_cruise in hybrid mode. Should be between 1,1 (smooth) and 1,5 (strong)
+#define THROTTLE_HYBRID_MAN 0
+#define THROTTLE_HYBRID_AH 1
+#define THROTTLE_HYBRID_BK 3
+
+//#define MX1HYBRID 								 // Alt Hold when throttle in deadband, manual otherwise
+#define MX2HYBRID  									// Alt Hold when throttle from 0 to deadband_high, manual otherwise (above deadband)
+//#define MXHYBRID	// switch Alt Hold <-> Throttle Assist
+//define AHHYBRID 	 // only Alt Hold
+//define TAHYBRID 	 // only Throttle Assist
+//define JDHYBRID	 // stick at center=vertical brake and alt-hold when vertical speed is near zero. Stick out from deadband (+70/-70) manual throttle (throttle assist for both!)
 
 static uint8_t hybrid_mode_roll;		// 1=alt_hold; 2=brake 3=loiter
 static uint8_t hybrid_mode_pitch;		// 1=alt_hold; 2=brake 3=loiter
 static int16_t brake_roll = 0,brake_pitch = 0; // 
 static float K_brake;					// ST-JD
+static uint8_t throttle_mode=THROTTLE_HYBRID_MAN;
 
 /*
 static float wind_comp_x, wind_comp_y;// ST-JD : wind compensation vector, averaged I terms from loiter controller
@@ -81,7 +93,7 @@ static void hybrid_run()
 	float vel_fw, vel_right;    // ST-JD : Used for Hybrid_mode
 	
     int16_t target_roll, target_pitch;
-    int16_t pilot_throttle_scaled;
+    int16_t pilot_throttle_scaled=0;
 
 	// if not auto armed set throttle to zero and exit immediately
     if(!ap.auto_armed || !inertial_nav.position_ok()) {
@@ -317,9 +329,118 @@ static void hybrid_run()
 		target_pitch=constrain_int16(target_pitch,-aparm.angle_max,aparm.angle_max);
 		attitude_control.angle_ef_roll_pitch_rate_ef_yaw(target_roll, target_pitch, target_yaw_rate);
 
-#define MXHYBRID	// switch Alt Hold <-> Throttle Assist
-//define AHHYBRID 	 // only Alt Hold
-//define TAHYBRID 	 // only Throttle Assist
+
+#ifdef MX1HYBRID
+		switch (throttle_mode) {
+			case THROTTLE_HYBRID_MAN:
+				if ((g.rc_3.control_in <= 0) && (climb_rate > -20)) { // Added climb_rate condition to avoid throttle off in flight.
+					attitude_control.set_throttle_out(0, false); // no need for angle boost with zero throttle
+				}else{
+					if (target_climb_rate==0) { //If stick is in deadband, switch to Hybrid Alt Hold
+						throttle_mode=THROTTLE_HYBRID_AH;
+						// initialise altitude target to stopping point
+						pos_control.set_target_to_stopping_point_z();
+					}
+					// ensure a reasonable throttle value
+					//pilot_throttle = constrain_int16(g.rc_3.control_in,0,1000);
+					if (target_climb_rate<0) { // stick throttle below mid
+						//change HYBRID_THROTTLE_FACTOR value from 1.1 (very smooth throttle) to 1.5 (strong trhottle) or maybe more/less to define
+						pilot_throttle_scaled = (int16_t)(g.throttle_cruise*(1.0f-(400.0f-(float)pilot_throttle_scaled)*(1.0f-1.0f/HYBRID_THROTTLE_FACTOR)/400.0f ));
+					}else{ // stick throttle above mid
+						//change HYBRID_THROTTLE_FACTOR value from 1.1 (very smooth throttle) to 1.5 (strong trhottle) or maybe more/less to define
+						pilot_throttle_scaled = (int16_t)(g.throttle_cruise*(1.0f+((float)pilot_throttle_scaled-600.0f)*(HYBRID_THROTTLE_FACTOR-1.0f)/400.0f ));
+					}
+					attitude_control.set_throttle_out(constrain_int16(pilot_throttle_scaled,0,1000), true);
+					/*
+					if (!ap.takeoff_complete && motors.armed()) {
+						if (pilot_throttle_scaled > g.throttle_cruise) {
+							// we must be in the air by now
+							set_takeoff_complete(true);
+						}
+					}
+					*/
+				}
+				break;
+			case THROTTLE_HYBRID_AH:
+				if (target_climb_rate!=0) { //If stick is out of deadband, switch to Hybrid manual throttle
+					throttle_mode=THROTTLE_HYBRID_MAN;
+				}
+				if (sonar_alt_health >= SONAR_ALT_HEALTH_MAX) {
+					// if sonar is ok, use surface tracking
+					target_climb_rate = get_throttle_surface_tracking(target_climb_rate, pos_control.get_alt_target(), G_Dt);
+				}
+				// update altitude target and call position controller
+				pos_control.set_alt_target_from_climb_rate(target_climb_rate, G_Dt);
+				pos_control.update_z_controller();
+				break;
+		}
+#endif
+
+#ifdef MX2HYBRID
+	switch (throttle_mode) {
+		case THROTTLE_HYBRID_AH:
+			if (target_climb_rate>0) { //If stick is in deadband or below, switch to Hybrid Alt Hold
+				throttle_mode=THROTTLE_HYBRID_MAN;	//set_throttle_mode(THROTTLE_HYBRID_AH);
+			}
+			if (sonar_alt_health >= SONAR_ALT_HEALTH_MAX) {
+				// if sonar is ok, use surface tracking
+				target_climb_rate = get_throttle_surface_tracking(target_climb_rate, pos_control.get_alt_target(), G_Dt);
+			}
+			// update altitude target and call position controller
+			pos_control.set_alt_target_from_climb_rate(target_climb_rate, G_Dt);
+			pos_control.update_z_controller();
+			break;
+		case THROTTLE_HYBRID_MAN:
+			if (target_climb_rate<=0){
+				throttle_mode=THROTTLE_HYBRID_AH;
+				pos_control.set_target_to_stopping_point_z(); // initialise altitude target to stopping point
+			}
+			//new code - throttle_max limited
+			//change HYBRID_THROTTLE_FACTOR value from 1.1 (very smooth throttle) to 1.5 (strong trhottle) or maybe more/less to define
+			pilot_throttle_scaled = (int16_t)(g.throttle_cruise*(1.0f+((float)pilot_throttle_scaled-600.0f)*(HYBRID_THROTTLE_FACTOR-1.0f)/400.0f ));
+			attitude_control.set_throttle_out(constrain_int16(pilot_throttle_scaled,0,1000), true);
+			/*if (!ap.takeoff_complete && motors.armed()) {
+				if (pilott_throttle_scaled > g.throttle_cruise) {
+					// we must be in the air by now
+					set_takeoff_complete(true);
+				}
+			}*/
+	}
+#endif
+
+#ifdef JDHYBRID	// THROTTLE_HYBRID_BK phase not finished yet! (and not tested...)
+	
+	float myGain;
+	Vector3f vel = inertial_nav.get_velocity();
+	// select vertical mode
+	if (abs(pilot_throttle_scaled-g.throttle_cruise)<=70) {
+		// check vertical speed
+		if (fabs(vel.z)<10) throttle_mode=THROTTLE_HYBRID_AH; else throttle_mode=THROTTLE_HYBRID_BK;
+	} else throttle_mode=THROTTLE_HYBRID_MAN;
+	// apply throttle mode
+	switch (throttle_mode)
+	{
+		case THROTTLE_HYBRID_AH:
+			if (sonar_alt_health >= SONAR_ALT_HEALTH_MAX) {
+				// if sonar is ok, use surface tracking
+				target_climb_rate = get_throttle_surface_tracking(target_climb_rate, pos_control.get_alt_target(), G_Dt);
+			}
+			// update altitude target and call position controller
+			pos_control.set_alt_target_from_climb_rate(target_climb_rate, G_Dt);
+			pos_control.update_z_controller();
+			break;
+		case THROTTLE_HYBRID_BK:
+			myGain = 1.0 - ((float)abs(pilot_throttle_scaled - g.throttle_cruise) / 200.0);
+			myGain = max(myGain, 0) * -2; // 2 is the gain
+			attitude_control.set_throttle_out(pilot_throttle_scaled + (vel.z * myGain), true);
+			break;
+		case THROTTLE_HYBRID_MAN:
+			myGain = 1.0 - ((float)abs(pilot_throttle_scaled - g.throttle_cruise) / 200.0);
+			myGain = max(myGain, 0) * -2; // 2 is the gain
+			attitude_control.set_throttle_out(pilot_throttle_scaled + (vel.z * myGain), true);
+			break;
+	}
+#endif
 #ifdef MXHYBRID
 		 // runs Hybrid altitude controller
 		if ((hybrid_mode_pitch==3) && (hybrid_mode_roll==3)) {

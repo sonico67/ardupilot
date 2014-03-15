@@ -492,7 +492,7 @@ static void Log_Write_Attitude()
 		timeout_pitch	: (int16_t)timeout_pitch,
 		timeout_roll	: (int16_t)timeout_roll,
 		loiter_stab_timer: (int16_t)loiter_stab_timer		
-    };
+    }; //IccccCCffccccc
     DataFlash.WriteBlock(&pkt, sizeof(pkt));
 
 #if AP_AHRS_NAVEKF_AVAILABLE
