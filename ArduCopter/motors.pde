@@ -18,12 +18,12 @@ static void arm_motors_check()
         return;
     }
 
-    // allow arming/disarming in fully manual flight modes ACRO, STABILIZE, SPORT, HYBRID, and DRIFT
+    // allow arming/disarming in fully manual flight modes ACRO, STABILIZE, SPORT and DRIFT
     if (manual_flight_mode(control_mode)) {
         allow_arming = true;
     }
 
-    // allow arming/disarming in Loiter and AltHold if landed
+    // allow arming/disarming in Loiter and AltHold if landed   JD-ST: added Hybrid mode
     if (ap.land_complete && (control_mode == LOITER || control_mode == ALT_HOLD || control_mode == HYBRID)) {
         allow_arming = true;
     }
@@ -100,7 +100,7 @@ static void auto_disarm_check()
         return;
     }
 
-    // allow auto disarm in manual flight modes or Loiter/AltHold if we're landed
+    // allow auto disarm in manual flight modes or Loiter/AltHold if we're landed   JD-ST: added Hybrid mode
     if(manual_flight_mode(control_mode) || (ap.land_complete && (control_mode == LOITER || control_mode == ALT_HOLD || control_mode == HYBRID))) {
         auto_disarming_counter++;
 

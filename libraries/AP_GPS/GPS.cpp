@@ -36,6 +36,7 @@ GPS::GPS(void) :
 	last_fix_time(0),
 	_have_raw_velocity(false),
     _last_gps_time(0),
+    _secondary_gps(false),
 	_idleTimer(0),
 	_status(GPS::NO_FIX),
 	_last_ground_speed_cm(0),
@@ -108,12 +109,15 @@ GPS::update(void)
         }
     }
 
-    // update notify with gps status
-    AP_Notify::flags.gps_status = _status;
+    if (!_secondary_gps) {
+        // update notify with gps status
+        AP_Notify::flags.gps_status = _status;
+    }
 }
 
 void
-GPS::setHIL(uint64_t _time_epoch_ms, float _latitude, float _longitude, float _altitude,
+GPS::setHIL(Fix_Status fix_status,
+            uint64_t _time_epoch_ms, float _latitude, float _longitude, float _altitude,
             float _ground_speed, float _ground_course, float _speed_3d, uint8_t _num_sats)
 {
 }

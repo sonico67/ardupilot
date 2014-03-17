@@ -2,7 +2,6 @@
 // Hybrid Mode : ST-JD
 // flight mode = 12
 ////////////////////////////////////////////////////////////////////////////////
-
 #define LOITER_DEADBAND 70
 #define SPEED_0 10
 #define NAV_HYBRID 1
@@ -49,17 +48,17 @@ static bool hybrid_init(bool ignore_checks)
 {
     if (GPS_ok() || ignore_checks) {
         // initialise filters on roll/pitch input
-        reset_roll_pitch_in_filters(g.rc_1.control_in, g.rc_2.control_in);
+        //reset_roll_pitch_in_filters(g.rc_1.control_in, g.rc_2.control_in);
 		// set target to current position
         wp_nav.init_loiter_target();
         // initialise altitude target to stopping point
         pos_control.set_target_to_stopping_point_z();
 		// if not initialised yet, set throttle_cruise to 500
-		if (g.throttle_cruise==0) g.throttle_cruise=500;
+		//if (g.throttle_cruise==0) g.throttle_cruise=500;
 		// compute K_brake
 		 K_brake=(15.0f*(float)wp_nav._brake_rate+95.0f)/100.0f;
 		 
-		 if (ap.land_complete) {
+		if (ap.land_complete) {
 			hybrid_mode_roll=3;				// Loiter start
 			hybrid_mode_pitch=3;			// Loiter start
 		}else{

@@ -32,7 +32,7 @@ public:
 		_updated(false)
 		{}
 
-    virtual void        init(AP_HAL::UARTDriver *s, enum GPS_Engine_Setting nav_setting = GPS_ENGINE_NONE);
+    virtual void        init(AP_HAL::UARTDriver *s, enum GPS_Engine_Setting nav_setting);
     virtual bool        read(void);
 
     /**
@@ -45,7 +45,8 @@ public:
      * @param speed_3d - ground speed in meters/second
      * @param altitude - altitude in meters
      */
-    virtual void        setHIL(uint64_t time_epoch_ms, float latitude, float longitude, float altitude,
+    virtual void        setHIL(Fix_Status fix_status,
+                               uint64_t time_epoch_ms, float latitude, float longitude, float altitude,
                                float ground_speed, float ground_course, float speed_3d, uint8_t num_sats);
 
 private:

@@ -89,12 +89,12 @@ static bool set_mode(uint8_t mode)
 		case HYBRID:		// JD-ST
 			success = hybrid_init(ignore_checks);
 			break;
-			
+
         default:
             success = false;
             break;
     }
-	
+
 	switch (control_mode) {
 		case HYBRID:	// JD-ST
 			hybrid_exit();

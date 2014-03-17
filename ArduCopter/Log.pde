@@ -460,7 +460,12 @@ struct PACKED log_Attitude {
     int16_t  pitch;
     uint16_t control_yaw;
     uint16_t yaw;
-	// JD-ST : wind compensation and offsets
+};
+#if HYBRID_LOG == ENABLED
+// JD-ST : Hybrid variables
+struct PACKED log_Hybrid {
+    LOG_PACKET_HEADER;
+	uint32_t time_ms;
 	float wind_comp_x;				
 	float wind_comp_y;
 	int16_t wind_offset_pitch;
@@ -469,7 +474,7 @@ struct PACKED log_Attitude {
 	int16_t timeout_roll;
 	int16_t loiter_stab_timer;
 };
-
+#endif
 // Write an attitude packet
 static void Log_Write_Attitude()
 {
@@ -483,18 +488,24 @@ static void Log_Write_Attitude()
         control_pitch   : (int16_t)targets.y,
         pitch           : (int16_t)ahrs.pitch_sensor,
         control_yaw     : (uint16_t)targets.z,
-        yaw             : (uint16_t)ahrs.yaw_sensor,
-		//JD-ST : wind compensation and offsets
-		wind_comp_x		: (float)wind_comp_x,
+        yaw             : (uint16_t)ahrs.yaw_sensor
+    }; 
+    DataFlash.WriteBlock(&pkt, sizeof(pkt));
+	// JD-ST: write Hybrid packed
+#if HYBRID_LOG == ENABLED	
+	struct log_Hybrid pkt1 = {
+        LOG_PACKET_HEADER_INIT(LOG_HYBRID_MSG),
+        time_ms         : hal.scheduler->millis(),
+        wind_comp_x		: (float)wind_comp_x,
 		wind_comp_y		: (float)wind_comp_y,
 		wind_offset_pitch: (int16_t)wind_offset_pitch,
 		wind_offset_roll: (int16_t)wind_offset_roll,
 		timeout_pitch	: (int16_t)timeout_pitch,
 		timeout_roll	: (int16_t)timeout_roll,
-		loiter_stab_timer: (int16_t)loiter_stab_timer		
-    }; //IccccCCffccccc
-    DataFlash.WriteBlock(&pkt, sizeof(pkt));
-
+		loiter_stab_timer: (int16_t)loiter_stab_timer	
+    }; 
+	DataFlash.WriteBlock(&pkt1, sizeof(pkt1));	// JD-ST
+#endif
 #if AP_AHRS_NAVEKF_AVAILABLE
     DataFlash.Log_Write_EKF(ahrs);
     DataFlash.Log_Write_AHRS2(ahrs);
@@ -724,8 +735,12 @@ static const struct LogStructure log_structure[] PROGMEM = {
     { LOG_CMD_MSG, sizeof(log_Cmd),                 
       "CMD", "BBBBBeLL",     "CTot,CNum,CId,COpt,Prm1,Alt,Lat,Lng" },
     { LOG_ATTITUDE_MSG, sizeof(log_Attitude),  
-      "ATT", "IccccCCffccccc",       "TMS,DRoll,Roll,DPitch,Pitch,DYaw,Yaw,Cx,Cy,Op,Or,Tp,Tr,Tl" },	// JD-ST: log wind_comp and wind_offset	
-//      "ATT", "IccccCC",      "TimeMS,DesRoll,Roll,DesPitch,Pitch,DesYaw,Yaw" },
+//      "ATT", "IccccCCffccccc",       "TMS,DRoll,Roll,DPitch,Pitch,DYaw,Yaw,Cx,Cy,Op,Or,Tp,Tr,Tl" },	// JD-ST: log wind_comp and wind_offset	
+      "ATT", "IccccCC",      "TimeMS,DesRoll,Roll,DesPitch,Pitch,DesYaw,Yaw" },
+#if HYBRID_LOG == ENABLED
+	{ LOG_HYBRID_MSG, sizeof(log_Hybrid),
+	  "HYB", "Iffhhhhh",     "TimeMS,WindX,WindY,Op,Or,Tp,Tr,Tloiter" },	// JD-ST: log wind_comp and wind_offset	
+#endif
     { LOG_MODE_MSG, sizeof(log_Mode),
       "MODE", "Mh",          "Mode,ThrCrs" },
     { LOG_STARTUP_MSG, sizeof(log_Startup),         
